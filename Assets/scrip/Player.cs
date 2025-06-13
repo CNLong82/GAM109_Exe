@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class Player : MonoBehaviour
 {
@@ -21,10 +22,13 @@ public class Player : MonoBehaviour
     private bool isClimbing = false;
     private bool isOnLadder = false;
 
+    private Vector3 spawnPoint;
+
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
         animator = GetComponent<Animator>();
+        spawnPoint = transform.position;
     }
 
     void Update()
@@ -32,14 +36,19 @@ public class Player : MonoBehaviour
         float moveX = Input.GetAxis("Horizontal");
         float moveY = Input.GetAxis("Vertical");
 
-        if (Input.GetKeyDown(KeyCode.L) && moveX != 0 && !isDashing)
+        bool isGrounded = Mathf.Abs(rb.linearVelocity.y) < 0.01f;
+
+        if (Input.GetKeyDown(KeyCode.L) && moveX != 0 && !isDashing && Time.time >= lastDashTime + dashCooldown && isGrounded)
         {
             isDashing = true;
             dashTimer = dashTime;
             lastDashTime = Time.time;
-            rb.linearVelocity = new Vector2(moveX > 0 ? dashSpeed : -dashSpeed, 0f);
-            animator.SetTrigger("isDash");
+
+            float dashDirection = moveX > 0 ? 1 : -1;
+            rb.linearVelocity = new Vector2(dashDirection * dashSpeed, 0f);
+            animator.SetBool("isDash", true);   
         }
+
 
         if (isDashing)
         {
@@ -47,6 +56,7 @@ public class Player : MonoBehaviour
             if (dashTimer <= 0f)
             {
                 isDashing = false;
+                animator.SetBool("isDash", false);
             }
             return;
         }
@@ -72,8 +82,6 @@ public class Player : MonoBehaviour
         {
             animator.SetBool("isRunning", false);
         }
-
-        animator.SetFloat("Speed", Mathf.Abs(moveX));
 
         if (Input.GetButtonDown("Jump") && jumpCount < maxJumps)
         {
@@ -134,6 +142,22 @@ public class Player : MonoBehaviour
         }
     }
 
+    void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (collision.collider.CompareTag("Trap"))
+        {
+            transform.position = spawnPoint;
+            rb.linearVelocity = Vector2.zero;
+        }
+    }
+
+    void OnTriggerStay2D(Collider2D other)
+    {
+        if (other.CompareTag("Next level"))
+        {
+            SceneManager.LoadScene("Map2");
+        }
+    }
 
 }
 
